@@ -2,7 +2,14 @@
     "name": "Example Name",
     "version": "1.0",
     "description": "This is a description.",
-    "permissions": ["declarativeContent", "storage", "tabs"],
+    "permissions": 
+    [
+        "declarativeContent", 
+        "tabs",
+        "activeTabs",
+        "http://*/*",
+        "https://*/*"
+    ],
     "background": {
       "scripts": ["background.js"],
       "persistent": false  
