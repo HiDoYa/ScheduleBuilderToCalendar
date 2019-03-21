@@ -1,46 +1,35 @@
-/*current = document.getElementsByClassName("meeting");
-for(i = 0; i < current.length; i++) {
-	console.log(current[i].innerText);
-}*/
-function scrapeThePage() {
-    var htmlCode = document.documentElement.outerHTML;
-    return htmlCode;
-}
+var htmlCode;
 
 document.addEventListener('DOMContentLoaded', () => {
-        // Get the active tab
-        /*
-        var tabs = chrome.tabs.query({ active: true, currentWindow: true }, 
-            function(tabs) {
-                var tab = tabs[0];
-                // Convert the function to a string
-                var scriptToExec = '' + scrapeThePage;
-                var scraped = chrome.tabs.executeScript(tab.id, {code: scriptToExec},
-                    function(scraped) {
-                        console.log(scraped);
-                        console.log(scraped[0]);
-                    }); 
-            });
-            */
     var scraped = chrome.tabs.executeScript({code: 'document.documentElement.outerHTML'},
         function(scraped) {
-            console.log(scraped[0]);
+            htmlCode = scraped[0];
         }
     ); 
     
 });
 
-var getCalendar = document.getElementById('getCalendar');
-getCalendar.onclick = function() {
-    var allClasses = currentDocument.getElementsByClassName("classTitle");
-    var classToSave = []
-    
-    for (var i = 0; i < allClasses.length; i++) {
-        var currentClass = allClassses[i].nextElementSibling;
-        var statusIndicator = currentClass.getElementsByClassName("statusIndicator");
-        if (statusIndicator.innertext == "Registered") {
-            classToSave.push(i);
+window.addEventListener('DOMContentLoaded', (event) =>  {
+    var getCalendar = document.getElementById('getCalendar');
+    getCalendar.onclick = function() {
+        var currentDocument = new DOMParser().parseFromString(htmlCode, "text/html")
+        var allClasses = currentDocument.getElementsByClassName("classTitle");
+        var classToSave = []
+        
+        for (var i = 0; i < allClasses.length; i++) {
+            console.log("running3");
+
+            var currentClass = allClasses[i].childNodes;
+            if (currentClass.length > 0) {
+                console.log("running2");
+
+                var statusIndicator = currentClass[0].getElementsByClassName("statusIndicator");
+                if (statusIndicator.innertext == "Registered") {
+                    classToSave.push(i);
+                    console.log("running1");
+                }
+            }
         }
     }
-}
+})
 
