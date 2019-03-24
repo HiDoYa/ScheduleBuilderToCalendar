@@ -11,10 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('DOMContentLoaded', () =>  {
     // Set default value for html date inputs
-    var today = new Date();
-    var format = today.toISOString().split("T")[0];
-    document.getElementsByClassName('startDate')[0].value = format;
-    document.getElementsByClassName('endDate')[0].value = format;
+    setDateInputs();
 
     // Clicks
     var getCalendar = document.getElementById('getCalendar');
@@ -24,22 +21,13 @@ window.addEventListener('DOMContentLoaded', () =>  {
         var formItr = formData.entries()
         var startTime = new Date(formItr.next().value[1]);
         var endTime = new Date(formItr.next().value[1]);
-        endTime.setHours(23,59,59);
+        endTime.setHours(40,59,59);
+        console.log(startTime.toISOString())
+        console.log(endTime.toISOString())
+
 
         /// FIND WHICH CLASSES TO SAVE
-        var currentDocument = new DOMParser().parseFromString(htmlCode, "text/html")
-        var allClasses = currentDocument.getElementsByClassName("classTitle");
-        var classToSave = []
-        for (var i = 0; i < allClasses.length; i++) {
-            var currentClass = allClasses[i].nextElementSibling;
-            if (currentClass != undefined) {
-                // Only include registered classes (not waitlisted)
-                var statusIndicator = currentClass.getElementsByClassName("statusIndicator registered");
-                if (statusIndicator != undefined && statusIndicator.length != 0) {
-                    classToSave.push(allClasses[i]);
-                }
-            }
-        }
+        var classToSave = findClassToSave();
 
         /// GET INFO ABOUT THE CLASS
         var classInfo = new Object();
@@ -62,74 +50,31 @@ window.addEventListener('DOMContentLoaded', () =>  {
             
 
             for (var j = 0; j < infoGet.length; j++){
+                // Can't add to calendar if TBA
+                if (infoGet[j].children[3].innerText == "TBA") {
+                    continue;
+                }
+                console.log("IS THIS", infoGet[j].children[1].innerText);
+
                 counter++;
                 var startTimeLoc = startTime;
 
+                console.log(infoGet[j].children)
+
                 // LAB, LECTURE, DISCUSSION, LECTURE/DISCUSSION
-                classInfo.name.push(name + ' ' + infoGet[j].children[0].innerText);
+                var blockName = name + ' ' + infoGet[j].children[0].innerText;
+                classInfo.name.push(blockName);
 
-                var weekdays = infoGet[j].children[2].innerText;
-                var weekdaysStr = '';
-                var start = -1;
-                for (var letter = 0; letter < weekdays.length; letter++) {
-                    if (letter != 0) {
-                        weekdaysStr += ','
-                    }
-                    switch (weekdays[letter]) {
-                        case 'M':
-                            weekdaysStr += "MO";
-                            if (start == -1) {
-                                start = 1;
-                            }
-                            break;
-                        case 'T':
-                            weekdaysStr += "TU";
-                            if (start == -1) {
-                                start = 2;
-                            }
-                            break;
-                        case 'W':
-                            weekdaysStr += "WE";
-                            if (start == -1) {
-                                start = 3;
-                            }
-                            break;
-                        case 'R':
-                            weekdaysStr += "TH";
-                            if (start == -1) {
-                                start = 4;
-                            }
-                            break;
-                        case 'F':
-                            weekdaysStr += "FR";
-                            if (start == -1) {
-                                start = 5;
-                            }
-                            break;
-                    }
-                }
-                classInfo.weekDay.push(weekdaysStr);
+                var weekdays = getWeekday(infoGet[j].children[2].innerText);
+                var start = weekdays[1];
+                classInfo.weekDay.push(weekdays[0]);
 
-                var time = infoGet[j].children[1].innerText;
-                var times = time.split('-');
-                var eachStart = times[0].split(' ');
-                var eachEnd = times[1].split(' ');
-                var timeStart = timeGet(eachStart[0], eachStart[1]);
-                var timeEnd = timeGet(eachEnd[1], eachEnd[2]);
-
-                if (startTimeLoc.getDay() != start) {
-                    var shift = start - startTimeLoc.getDay();
-                    startTimeLoc.setDate(startTimeLoc.getDate() + shift);
-                }
-                var beginning = startTimeLoc;
-                beginning.setHours(timeStart[0], timeStart[1]);
-                classInfo.startTime.push(dateStrFormat(beginning.toISOString()));
-
-                var ending = startTimeLoc;
-                ending.setHours(timeEnd[0], timeEnd[1]);
-                classInfo.endTime.push(dateStrFormat(ending.toISOString()));
-
-                classInfo.location.push(infoGet[j].children[3].innerText);
+                var time = getTime(infoGet[j].children[1].innerText, startTimeLoc, start);
+                classInfo.startTime.push(time[0]);
+                classInfo.endTime.push(time[1]);
+                
+                var location = infoGet[j].children[3].innerText;
+                classInfo.location.push(location);
             }
         }
 
@@ -172,6 +117,76 @@ window.addEventListener('DOMContentLoaded', () =>  {
     }
 })
 
+function getTime(time, startTimeLoc, start) {
+    if (time == "TBA") {
+        return ["", ""]
+    }
+    var times = time.split('-');
+    var eachStart = times[0].split(' ');
+    var eachEnd = times[1].split(' ');
+    var timeStart = timeAMPM(eachStart[0], eachStart[1]);
+    var timeEnd = timeAMPM(eachEnd[1], eachEnd[2]);
+    console.log(startTimeLoc.toISOString())
+
+    if (startTimeLoc.getDay() != start) {
+        var shift = start - startTimeLoc.getDay();
+        console.log(start, startTimeLoc.getDay(), shift)
+        startTimeLoc.setDate(startTimeLoc.getDate() + shift);
+    }
+    var beginning = startTimeLoc;
+    var ending = startTimeLoc;
+
+    console.log(startTimeLoc.toISOString())
+    beginning.setHours(timeStart[0], timeStart[1]);
+    ending.setHours(timeEnd[0], timeEnd[1]);
+    console.log(beginning.toISOString());
+
+    return [dateStrFormat(beginning.toISOString()), dateStrFormat(ending.toISOString())];
+}
+
+function getWeekday(weekdays) {
+    var weekdaysStr = '';
+    var start = -1;
+    for (var letter = 0; letter < weekdays.length; letter++) {
+        if (letter != 0) {
+            weekdaysStr += ','
+        }
+        switch (weekdays[letter]) {
+            case 'M':
+                weekdaysStr += "MO";
+                if (start == -1) {
+                    start = 1;
+                }
+                break;
+            case 'T':
+                weekdaysStr += "TU";
+                if (start == -1) {
+                    start = 2;
+                }
+                break;
+            case 'W':
+                weekdaysStr += "WE";
+                if (start == -1) {
+                    start = 3;
+                }
+                break;
+            case 'R':
+                weekdaysStr += "TH";
+                if (start == -1) {
+                    start = 4;
+                }
+                break;
+            case 'F':
+                weekdaysStr += "FR";
+                if (start == -1) {
+                    start = 5;
+                }
+                break;
+        }
+    }
+    return [weekdaysStr, start];
+}
+
 function heading () {
     var str = [
         "BEGIN:VCALENDAR",
@@ -204,7 +219,7 @@ function heading () {
     return str.join('\n');
 }
 
-function timeGet(time, str) {
+function timeAMPM(time, str) {
     if (str == "AM") {
         var spTime = time.split(':');
         return spTime;
@@ -237,4 +252,28 @@ function download(data, filename, type) {
             window.URL.revokeObjectURL(url);  
         }, 0); 
     }
+}
+
+function setDateInputs() {
+    var today = new Date();
+    var format = today.toISOString().split("T")[0];
+    document.getElementsByClassName('startDate')[0].value = format;
+    document.getElementsByClassName('endDate')[0].value = format;
+}
+
+function findClassToSave() {
+    var currentDocument = new DOMParser().parseFromString(htmlCode, "text/html")
+    var allClasses = currentDocument.getElementsByClassName("classTitle");
+    var classToSave = []
+    for (var i = 0; i < allClasses.length; i++) {
+        var currentClass = allClasses[i].nextElementSibling;
+        if (currentClass != undefined) {
+            // Only include registered classes (not waitlisted)
+            var statusIndicator = currentClass.getElementsByClassName("statusIndicator registered");
+            if (statusIndicator != undefined && statusIndicator.length != 0) {
+                classToSave.push(allClasses[i]);
+            }
+        }
+    }
+    return classToSave;
 }
