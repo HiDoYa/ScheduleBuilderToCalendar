@@ -1,7 +1,7 @@
 {
-    "name": "Example Name",
+    "name": "Schedule to Calendar",
     "version": "1.0",
-    "description": "This is a description.",
+    "description": "Converts UC Davis schedule builder to ical calendar format.",
     "permissions": 
     [
         "declarativeContent", 
@@ -13,6 +13,10 @@
       "scripts": ["background.js"],
       "persistent": false  
     },
+    "content_scripts": [{
+        "matches": ["https://my.ucdavis.edu/schedulebuilder/*"],
+        "css": ["main.css"]
+    }],
     "page_action": {
         "default_popup": "popup.html",
         "default_icon": {
