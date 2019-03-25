@@ -19,12 +19,9 @@ window.addEventListener('DOMContentLoaded', () =>  {
         /// RETRIEVE DATA FROM FORMS
         var formData = new FormData(document.querySelector('form'));
         var formItr = formData.entries()
-        var startTime = new Date(formItr.next().value[1]);
-        var endTime = new Date(formItr.next().value[1]);
-        endTime.setHours(40,59,59);
-        console.log(startTime.toISOString())
-        console.log(endTime.toISOString())
-
+        var startDate = new Date(formItr.next().value[1]);
+        var endDate = new Date(formItr.next().value[1]);
+        endDate.setHours(40,59,59);
 
         /// FIND WHICH CLASSES TO SAVE
         var classToSave = findClassToSave();
@@ -54,22 +51,20 @@ window.addEventListener('DOMContentLoaded', () =>  {
                 if (infoGet[j].children[3].innerText == "TBA") {
                     continue;
                 }
-                console.log("IS THIS", infoGet[j].children[1].innerText);
 
                 counter++;
-                var startTimeLoc = startTime;
-
-                console.log(infoGet[j].children)
+                var startDateLoc = clone(startDate);
 
                 // LAB, LECTURE, DISCUSSION, LECTURE/DISCUSSION
                 var blockName = name + ' ' + infoGet[j].children[0].innerText;
                 classInfo.name.push(blockName);
+                console.log(blockName);
 
                 var weekdays = getWeekday(infoGet[j].children[2].innerText);
                 var start = weekdays[1];
                 classInfo.weekDay.push(weekdays[0]);
 
-                var time = getTime(infoGet[j].children[1].innerText, startTimeLoc, start);
+                var time = getTime(infoGet[j].children[1].innerText, startDateLoc, start);
                 classInfo.startTime.push(time[0]);
                 classInfo.endTime.push(time[1]);
                 
@@ -89,26 +84,27 @@ window.addEventListener('DOMContentLoaded', () =>  {
             // Get and format the date
             var dateObj = new Date();
             var current = dateStrFormat(dateObj.toISOString());
-            var until = dateStrFormat(endTime.toISOString());
+            var until = dateStrFormat(endDate.toISOString());
 
-            // Get DTSTART, DTEND, endDate, location, summary, weekDays
+            // Unnecessary info is commented out
             var BEGIN = "BEGIN:VEVENT";
-            var DTSTART = "DTSTART;TZID=America/Los_Angeles:" + classInfo.startTime[i] + "Z";
-            var DTEND = "DTEND;TZID=America/Los_Angeles:" + classInfo.endTime[i] + "Z";
-            var RRULE_UNTIL_BYDAY = "RRULE:FREQ=WEEKLY;" + "UNTIL=" + until + 'Z;' + "BYDAY:" + classInfo.weekDay[i];
-            var DTSTAMP = "DTSTMP:" + current + "Z";
+            var DTSTART = "DTSTART:" + classInfo.startTime[i];
+            var DTEND = "DTEND:" + classInfo.endTime[i];
+            var RRULE_UNTIL_BYDAY = "RRULE:FREQ=WEEKLY;WKST=SU;" + "UNTIL=" + until + ';' + "BYDAY=" + classInfo.weekDay[i];
+            //var DTSTAMP = "DTSTMP:" + current;
             var UID = "UID:" + current + Math.random() + "@schedulebuilder";
-            var CREATED = "CREATED:" + current + "Z";
-            var DESCRIPTION = "DESCRIPTION:";
-            var LAST_MODIFIED = "LAST-MODIFIED:" + current + "Z";
+            //var CREATED = "CREATED:" + current;
+            //var DESCRIPTION = "DESCRIPTION:";
+            //var LAST_MODIFIED = "LAST-MODIFIED:" + currentClass;
             var LOCATION = "LOCATION:" + classInfo.location[i];
-            var SEQUENCE = "SEQUENCE:0"; 
-            var STATUS = "STATUS:CONFIRMED";
+            //var SEQUENCE = "SEQUENCE:0"; 
+            //var STATUS = "STATUS:CONFIRMED";
             var SUMMARY = "SUMMARY:" + classInfo.name[i];
-            var TRANSP = "TRANSP:OPAQUE";
+            //var TRANSP = "TRANSP:OPAQUE";
             var END = "END:VEVENT";
 
-            var strArr = [BEGIN, DTSTART, DTEND, RRULE_UNTIL_BYDAY, DTSTAMP, UID, CREATED, DESCRIPTION, LAST_MODIFIED, LOCATION, SEQUENCE, STATUS, SUMMARY, TRANSP, END];
+            //var strArr = [BEGIN, DTSTART, DTEND, RRULE_UNTIL_BYDAY, DTSTAMP, UID, CREATED, DESCRIPTION, LAST_MODIFIED, LOCATION, SEQUENCE, STATUS, SUMMARY, TRANSP, END];
+            var strArr = [BEGIN, DTSTART, DTEND, RRULE_UNTIL_BYDAY, UID, LOCATION, SUMMARY, END];
             final += '\n' + strArr.join('\n');
         }
         final += '\n' + "END:VCALENDAR";
@@ -117,31 +113,30 @@ window.addEventListener('DOMContentLoaded', () =>  {
     }
 })
 
-function getTime(time, startTimeLoc, start) {
+function getTime(time, startDateLoc, start) {
     if (time == "TBA") {
         return ["", ""]
     }
+    //Parse
     var times = time.split('-');
     var eachStart = times[0].split(' ');
     var eachEnd = times[1].split(' ');
+
+    // Convert to military time
     var timeStart = timeAMPM(eachStart[0], eachStart[1]);
     var timeEnd = timeAMPM(eachEnd[1], eachEnd[2]);
-    console.log(startTimeLoc.toISOString())
 
-    if (startTimeLoc.getDay() != start) {
-        var shift = start - startTimeLoc.getDay();
-        console.log(start, startTimeLoc.getDay(), shift)
-        startTimeLoc.setDate(startTimeLoc.getDate() + shift);
+    // Set start date to the correct weekday
+    if (startDateLoc.getDay() != start) {
+        var shift = start - startDateLoc.getDay();
+        startDateLoc.setDate(startDateLoc.getDate() + shift);
     }
-    var beginning = startTimeLoc;
-    var ending = startTimeLoc;
-
-    console.log(startTimeLoc.toISOString())
+    var beginning = clone(startDateLoc);
+    var ending = clone(startDateLoc);
     beginning.setHours(timeStart[0], timeStart[1]);
     ending.setHours(timeEnd[0], timeEnd[1]);
-    console.log(beginning.toISOString());
 
-    return [dateStrFormat(beginning.toISOString()), dateStrFormat(ending.toISOString())];
+    return [printDate(beginning), printDate(ending)];
 }
 
 function getWeekday(weekdays) {
@@ -190,32 +185,9 @@ function getWeekday(weekdays) {
 function heading () {
     var str = [
         "BEGIN:VCALENDAR",
-        "PRODID:-//Google Inc//Google Calendar 70.9054//EN",
-        "VERSION:2.0",
-        "CALSCALE:GREGORIAN",
-        "METHOD:PUBLISH",
-        "X-WR-CALNAME:Class",
-        "X-WR-TIMEZONE:America/Los_Angeles",
-        "BEGIN:VTIMEZONE",
-        "TZID:America/Los_Angeles",
-        "X-LIC-LOCATION:America/Los_Angeles",
-        "BEGIN:DAYLIGHT",
-        "TZOFFSETFROM:-0800",
-        "TZOFFSETTO:-0700",
-        "TZNAME:PDT",
-        "DTSTART:19700308T020000",
-        "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU",
-        "END:DAYLIGHT",
-        "BEGIN:STANDARD",
-        "TZOFFSETFROM:-0700",
-        "TZOFFSETTO:-0800",
-        "TZNAME:PST",
-        "DTSTART:19701101T020000",
-        "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU",
-        "END:STANDARD",
-        "END:VTIMEZONE"
+        "PRODID:ClassSchedule",
+        "VERSION:2.0"
     ]
-
     return str.join('\n');
 }
 
@@ -225,7 +197,8 @@ function timeAMPM(time, str) {
         return spTime;
     } else if (str == "PM") {
         var spTime = time.split(':');
-        spTime[0] += 12;
+        // Convert the hour to int, add, then convert it back to string
+        spTime[0] = String(parseInt(spTime[0], 10) + 12);
         return spTime;
     }
 }
@@ -276,4 +249,15 @@ function findClassToSave() {
         }
     }
     return classToSave;
+}
+
+function clone(obj) {
+    return new Date(obj.toLocaleString("en", {timeZone: "America/Los_Angeles"}));
+}
+
+// To replace toISOString (to deal with time zone problems)
+function printDate(date) {
+    // -7 only works for PST
+    date.setHours(-7 + date.getHours());
+    return dateStrFormat(date.toISOString());
 }
